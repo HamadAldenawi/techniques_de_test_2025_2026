@@ -1,99 +1,168 @@
-# TODO
-# PLAN DE TESTS - Triangulator
+﻿# PLAN DE TESTS — Projet Triangulator  
 
-## Objectif
-L'objectif de ce plan de tests est de définir les différentes étapes pour valider le composant **Triangulator**, en s'assurant de :
-- la **justesse des triangulations** calculées,
-- la **récupération correcte des PointSets** depuis le PointSetManager,
-- la **conformité aux API exposées**,
-- les **performances** et la **stabilité** du service,
-- la gestion correcte des **cas limites et erreurs**.
 
----
+# 1. 🎯 Objectif général
 
-## Types de tests
+L’objectif de ce plan de tests est de définir toutes les stratégies de validation nécessaires pour garantir la qualité et la robustesse du composant **Triangulator**.  
+Ce plan vise à :
 
-### 1. Tests unitaires
-Les tests unitaires permettront de vérifier les fonctionnalités fondamentales du Triangulator sans dépendre des autres composants.
-
-#### 1.1 Conversion PointSet ↔ format binaire
-- Vérifier que la fonction de **serialisation** transforme correctement un ensemble de points en bytes.
-- Vérifier que la fonction de **désérialisation** reconstruit exactement le PointSet original.
-- Cas à tester :
-  - 0 points
-  - 1 point
-  - 10 points aléatoires
-  - Points avec coordonnées négatives ou décimales
-
-#### 1.2 Conversion Triangles ↔ format binaire
-- Vérifier que les triangles peuvent être convertis en bytes et récupérés correctement.
-- Cas à tester :
-  - Un triangle simple
-  - Plusieurs triangles avec des sommets partagés
-  - Cas limite : triangles avec indices identiques ou invalides
-
-#### 1.3 Algorithme de triangulation
-- Vérifier que l'algorithme renvoie des triangles corrects pour :
-  - un triangle simple (3 points)
-  - 4 ou 5 points formant un polygone simple
-  - points aléatoires (10 à 100 points)
-  - points alignés horizontalement ou verticalement (cas limite)
-  - points identiques (duplicated points)
-
-- Vérifier que :
-  - Tous les indices des triangles sont valides
-  - Aucun triangle n'a des sommets en dehors du PointSet
-  - Les triangles couvrent bien l'ensemble des points
+- Vérifier la **validité des triangulations** générées.
+- S’assurer de la **conversion correcte** entre les formats binaires et les PointSets.
+- Tester les **endpoints HTTP** du Triangulator.
+- Mesurer les **performances**.
+- Gérer les **cas limites** et les erreurs réseau/données.
 
 ---
 
-### 2. Tests d'intégration API
-Ces tests permettent de vérifier la communication entre le Triangulator et le PointSetManager via les API HTTP.
+# 2. 🧱 Structure des tests
 
-#### 2.1 Récupération de PointSet
-- Tester GET `/point_set/{id}` pour :
-  - ID existant → renvoie le PointSet correct
-  - ID inexistant → renvoie une erreur 404
-  - ID invalide (string au lieu de number) → renvoie une erreur 400
+Le projet est organisé en trois niveaux :
+TP/tests/
+│
+├── unit/ → Tests unitaires
+├── integration/ → Tests d’intégration API
+└── performance/ → Tests de performance
 
-#### 2.2 Triangulation via POST
-- Tester POST `/triangulator` avec un PointSetID valide → renvoie les triangles corrects
-- Tester POST avec ID inexistant → renvoie une erreur 404
-- Tester POST avec PointSet vide → vérifier comportement (erreur ou triangle vide)
-- Tester POST avec données mal formées → renvoie erreur 400
-
-#### 2.3 Cas limites API
-- Vérifier que le service ne plante pas si plusieurs requêtes concurrentes sont envoyées
-- Vérifier que les indices des triangles correspondent toujours au PointSet envoyé
+Les tests sont exécutés automatiquement via **pytest**.
 
 ---
 
-### 3. Tests de performance
-- Mesurer le temps de conversion PointSet ↔ bytes pour :
-  - 10, 100, 1000, 10000 points
-- Mesurer le temps de triangulation pour :
-  - 10 points, 100 points, 1000 points
-- Vérifier que le service ne plante pas et ne dépasse pas des temps raisonnables (ex. < 1s pour 1000 points)
-- Vérifier la consommation mémoire sur de grands ensembles
+# 3. 🧪 Tests unitaires
+
+Les tests unitaires valident chaque composant individuellement.
 
 ---
 
-### 4. Autres tests
-- Cas limites et robustesse :
-  - PointSet vide (0 point)
-  - PointSet avec 1 point
-  - Tous les points identiques
-  - Points alignés (tous sur une ligne horizontale ou verticale)
-- Vérifier que la sortie Triangles est cohérente :
-  - Aucun triangle avec des indices hors PointSet
-  - Aucune duplication inutile
-  - Respect de la topologie (triangles connectés correctement)
+## 3.1 Tests du module PointSet
+
+Objectifs :
+
+- Vérifier la structure (listes de points).
+- Valider les méthodes : `__len__`, `__getitem__`, `to_list()`, `as_dict()`, `from_dict()`.
+- Test du comportement avec données vides.
+
+Cas testés :
+
+- Création d’un PointSet.
+- Accès par indice.
+- Conversion en dictionnaire.
+- Reconstruction depuis dictionnaire.
+- PointSet vide.
 
 ---
 
-## Notes de méthodologie
-- **Test First** : écrire les tests avant l’implémentation
-- **Automatisation** : tous les tests seront exécutables avec `pytest`
-- **Différenciation** : tests unitaires, intégration et performance séparés pour exécution ciblée
-- **Documentation** : chaque test doit être commenté et expliquer ce qu’il vérifie
-- **Couverture** : s'assurer que toutes les fonctions importantes sont couvertes par au moins un test
+## 3.2 Tests du module binary (encode/decode)
+
+Objectifs :
+
+- Vérifier l’encodage binaire conformément au format imposé.
+- Valider la précision des floats (tolérance `1e-5`).
+- Tester les erreurs en cas de buffer trop court ou données corrompues.
+
+Cas testés :
+
+- PointSet vide.
+- Un seul point.
+- PointSet large (100 points).
+- Données corrompues → `ValueError`.
+- Type de retour : toujours `bytes`.
+- Cohérence du nombre de points.
+
+---
+
+## 3.3 Tests du module triangulation
+
+Objectifs :
+
+- Valider l’algorithme Ear Clipping.
+- Tester plusieurs scénarios géométriques.
+
+Cas testés :
+
+- Triangle simple.
+- Carré (2 triangles attendus).
+- Polygone régulier à 10 points (8 triangles).
+- Ordre inversé (CW ↔ CCW).
+- Points dupliqués.
+- Points alignés.
+- Ensemble vide.
+- Points aléatoires.
+
+---
+
+# 4. 🌐 Tests d’intégration API
+
+Ces tests vérifient la communication entre :
+
+- le serveur Triangulator (Flask),
+- le client PointSetManager (mocké via `monkeypatch`).
+
+Cas testés :
+
+### ✔ 4.1 Endpoint `/`
+- Retourne un JSON `"Triangulator running"`.
+
+### ✔ 4.2 Endpoint `/triangulate/<id>`
+- Type de retour : `application/octet-stream`.
+- Contenu binaire non vide.
+
+### ✔ 4.3 Gestion des erreurs
+- ID inexistant → 502.
+- Client renvoie `None` → 502.
+- JSON mal formé → 502.
+- Simulation client cassé → 502.
+
+---
+
+# 5. 🚀 Tests de performance
+
+But : vérifier que la triangulation fonctionne sur des ensembles massifs.
+
+Cas testés :
+
+- Polygone de 1000 points.
+- Réalisation rapide et sans crash.
+- Marqués avec `@pytest.mark.performance`.
+
+---
+
+# 6. 📊 Outils utilisés
+
+| Outil | Utilité |
+|-------|---------|
+| **pytest** | Exécution des tests |
+| **coverage** | Mesure de couverture |
+| **ruff** | Qualité du code |
+| **pdoc3** | Génération de documentation HTML |
+| **makefile** | Automatisation (Linux/Mac) — sous Windows : commandes directes |
+
+---
+
+# 7. 📌 Critères de validation
+
+- Tous les tests doivent passer (`28 passed`).
+- Couverture ≥ **85%** (obtenu : **89%**).
+- Algorithme correct pour tous les cas.
+- Module binaire robuste aux erreurs.
+- API fonctionnelle et stable.
+- Documentation générée (`pdoc`).
+- Qualité de code conforme (`ruff`).
+
+---
+
+# 8. 🏁 Conclusion
+
+Ce plan définit un ensemble complet de tests couvrant :
+
+- les fonctionnalités internes,
+- l’encodage binaire,
+- la triangulation,
+- les APIs,
+- la performance,
+- la robustesse aux erreurs.
+
+Le projet a été développé suivant une approche **Test First**, et l’implémentation finale passe tous les tests avec succès.
+
+---
+
+

@@ -234,5 +234,3 @@ Dans cette logique 4 rendus sont attendus :
   bien/mal fait, les choses que vous feriez autrement avec le recul, en quoi
   votre plan initial était bon/mauvais, etc.
   Ce document doit également être rendu à la fin de la dernière séance.
-
-# Bon courage !
