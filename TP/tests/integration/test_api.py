@@ -100,3 +100,56 @@ def test_triangulator_missing_id(monkeypatch):
     rv = client.get("/triangulate/99999")
 
     assert rv.status_code == 502
+
+
+# ----------------------------------------------------------
+# EXTRA TEST 1 – Test valid JSON structure from "/" endpoint
+# ----------------------------------------------------------
+
+def test_api_root_json_format():
+    client = app.test_client()
+    res = client.get("/")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert isinstance(data, dict)
+    assert "status" in data
+
+
+# ----------------------------------------------------------
+# EXTRA TEST 2 – Test empty PointSet triangulation
+# ----------------------------------------------------------
+
+def test_triangulate_empty_pointset(monkeypatch):
+    from TP.triangulator import server as srv
+
+    class FakeEmptyPS:
+        def get_pointset(self, ps_id):
+            return PointSet([])
+
+    monkeypatch.setattr(srv, "client", FakeEmptyPS())
+
+    client = app.test_client()
+    res = client.get("/triangulate/1")
+
+    assert res.status_code == 200
+    assert res.headers["Content-Type"] == "application/octet-stream"
+    assert len(res.data) > 0  # binary format is valid even if empty
+
+
+# ----------------------------------------------------------
+# EXTRA TEST 3 – Internal crash → must return 502
+# ----------------------------------------------------------
+
+def test_api_internal_error(monkeypatch):
+    from TP.triangulator import server as srv
+
+    class FakeCrash:
+        def get_pointset(self, ps_id):
+            raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(srv, "client", FakeCrash())
+
+    client = app.test_client()
+    res = client.get("/triangulate/55")
+
+    assert res.status_code == 502

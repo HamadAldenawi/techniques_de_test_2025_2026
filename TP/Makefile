@@ -1,4 +1,4 @@
-﻿test:
+test:
 	pytest -q
 
 unit_test:

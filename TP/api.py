@@ -1,4 +1,4 @@
-﻿# convenience script to run the triangulator server
+# convenience script to run the triangulator server
 from TP.triangulator.server import app
 
 if __name__ == "__main__":

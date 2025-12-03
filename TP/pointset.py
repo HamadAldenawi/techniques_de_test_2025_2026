@@ -1,4 +1,8 @@
-﻿class PointSet:
+
+class PointSet:
+
+
+
     """
     Simple container for a list of 2D points.
     points = [(x1, y1), (x2, y2), ...]
