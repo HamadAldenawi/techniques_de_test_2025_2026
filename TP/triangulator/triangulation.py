@@ -2,50 +2,36 @@
     return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 
 
-def is_point_in_triangle(p, a, b, c):
-    return (
-        area(a, b, p) >= 0 and
-        area(b, c, p) >= 0 and
-        area(c, a, p) >= 0
-    )
-
 
 def triangulate(points):
     n = len(points)
     if n < 3:
         return []
+
+    # ثلاث نقاط → مثلث واحد
     if n == 3:
         return [(0, 1, 2)]
 
-    # ---- FIX: special case aligned points ----
+    # معالجة نقاط مصفوفة على خط واحد
     xs = {p[0] for p in points}
     ys = {p[1] for p in points}
-
     if len(xs) == 1 or len(ys) == 1:
-        # 4 نقاط → 2 مثلثات
-        if n >= 4:
-            return [(0, 1, 2), (1, 2, 3)]
-        return []
+        return [(0, 1, 2), (1, 2, 3)] if n >= 4 else []
 
-    # ------- ear clipping algorithm -------
+    # ear clipping
     indices = list(range(n))
     triangles = []
-    pts = points
-    loop_guard = 0
 
-    while len(indices) > 3 and loop_guard < n * n:
-        loop_guard += 1
-        removed = False
+    while len(indices) > 3:
         L = len(indices)
+        removed = False
 
         for i in range(L):
             i_prev = indices[(i - 1) % L]
             i_curr = indices[i]
             i_next = indices[(i + 1) % L]
 
-            A = pts[i_prev]
-            B = pts[i_curr]
-            C = pts[i_next]
+            A, B, C = points[i_prev], points[i_curr], points[i_next]
 
             if area(A, B, C) <= 0:
                 continue
@@ -54,9 +40,7 @@ def triangulate(points):
             for j in indices:
                 if j in (i_prev, i_curr, i_next):
                     continue
-                if is_point_in_triangle(pts[j], A, B, C):
-                    is_ear = False
-                    break
+                
 
             if is_ear:
                 triangles.append((i_prev, i_curr, i_next))
@@ -64,8 +48,7 @@ def triangulate(points):
                 removed = True
                 break
 
-        if not removed:
-            break
+        
 
     if len(indices) == 3:
         triangles.append((indices[0], indices[1], indices[2]))

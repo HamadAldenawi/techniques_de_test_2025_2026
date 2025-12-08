@@ -60,3 +60,26 @@ def test_force_triangulation_last_triangle():
     pts = [(0,0),(1,0),(1,1),(0,1)]
     result = triangulate(pts)
     assert any(len(t)==3 for t in result)
+
+import pytest
+from TP.triangulator.binary import decode_pointset
+
+def test_decode_pointset_missing_bytes_for_point():
+    # buffer يحتوي عدد النقاط = 1 لكن بدون 8 bytes كاملة
+    buffer = b"\x00\x00\x00\x01" + b"\x00\x00\x80\x3F"  # نصف float فقط
+    with pytest.raises(ValueError):
+        decode_pointset(buffer)
+
+def test_decode_triangle_missing_bytes():
+    # pointset يحتوي نقطة واحدة كاملة
+    buffer = (
+        b"\x00\x00\x00\x01"              # 1 point
+        + b"\x00\x00\x80\x3F"            # x float
+        + b"\x00\x00\x80\x3F"            # y float
+        + b"\x00\x00\x00\x01"            # 1 triangle
+        + b"\x00\x00\x00\x01"            # a
+        + b"\x00\x00\x00\x02"            # b
+        # c مفقودة → يجب أن تنفجر
+    )
+    with pytest.raises(ValueError):
+        decode_triangles(buffer)

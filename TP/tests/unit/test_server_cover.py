@@ -13,3 +13,5 @@ def test_server_internal_exception():
         client = app.test_client()
         rv = client.get("/triangulate/1")
         assert rv.status_code == 502
+
+        
